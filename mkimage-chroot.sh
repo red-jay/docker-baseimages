@@ -214,12 +214,12 @@ docker_init () {
   distribution="${distribution%-${release}}"
   docker import "${distribution}-${release}.tar" "pre-${distribution}-${release}"
   docker run -i --name "setup-${distribution}-${release}" -t "pre-${distribution}-${release}" /startup
-  docker export "setup-${distribution}-${release}" | docker import - "${distribution}-${release}"
+  docker export "setup-${distribution}-${release}" | docker import - "build/${distribution}-${release}"
   docker rm "setup-${distribution}-${release}"
   docker rmi "pre-${distribution}-${release}"
 
   case "${packagemanager}" in
-    yum) docker run --rm=true "${distribution}-${release}" yum check-update
+    yum) docker run --rm=true "build/${distribution}-${release}" yum check-update
   esac
 }
 
