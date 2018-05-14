@@ -75,7 +75,7 @@ create_chroot_tarball () {
       for gpg in "${gpg_keydir}"/* ; do
         rpm --import "${gpg}"
       done
-      rpm -iv --nodeps "config/${distribution}/*.rpm"
+      rpm -iv --nodeps "${subdir}/*.rpm"
       centos_ver=$(rpm -q --qf "%{VERSION}" centos-release || true)
       case "${centos_ver}" in
         5) sudo sed -i -e '/^mirrorlist.*/d' \
@@ -83,25 +83,20 @@ create_chroot_tarball () {
                   -e 's/mirror/vault/g' \
                   -e 's@centos/$release@5.11@g' \
            "${rootdir}/etc/yum.repos.d/CentOS-Base.repo"
-           sed -e 's/,nocontexts//' < config/yum-common/yum.conf | sudo tee "${rootdir}/etc/yum.conf" > /dev/null
+           sed -e 's/,nocontexts//' < config/yum-common.conf | sudo tee "${rootdir}/etc/yum.conf" > /dev/null
         ;;
         *)
-          sudo cp config/yum-common/yum.conf "${rootdir}/etc/yum.conf"
+          sudo cp config/yum-common.conf "${rootdir}/etc/yum.conf"
         ;;
       esac
-      if [ "${caphack}" == "true" ] ; then
-        # install our hack with the same in-chroot path ;)
-        mkdir -p --mode=0755 "${rootdir}"/usr/local/lib64
-        install -m755 "/tmp/LIBCAP_HACKS/${distribution}/noop_cap_set_file.so" "${rootdir}/usr/local/lib64/noop_cap_set_file.so"
-      fi
       # let yum do the rest of the lifting
       sudo rm -rf /var/tmp/yum-* /var/cache/yum/*
       yumconf=$(mktemp --tmpdir yum.XXXX.conf)
       sudo cp "${rootdir}/etc/yum.conf" "${yumconf}"
       printf 'reposdir=%s\n' "${rootdir}/etc/yum.repos.d" >> "${yumconf}"
       case "${distribution}" in
-        centos*) yum --releasever="${release}" -c "${yumconf}" install -y @Base yum yum-plugin-ovl yum-utils centos-release centos-release-notes ;;
-        fedora*) yum --releasever="${release}" -c "${yumconf}" install -y '@Minimal Install' yum yum-plugin-ovl yum-utils fedora-release fedora-release-notes fedora-gpg-keys ;;
+        centos*) sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -y @Base yum yum-plugin-ovl yum-utils centos-release centos-release-notes ;;
+        fedora*) sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -y '@Minimal Install' yum yum-plugin-ovl yum-utils fedora-release fedora-release-notes fedora-gpg-keys ;;
       esac
     ;;
     apt)
