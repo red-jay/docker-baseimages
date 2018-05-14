@@ -40,8 +40,8 @@ sudo () { env "$@"; }
 [ $(id -u) != "0" ] && sudo () { command sudo env "$@"; }
 
 create_chroot_tarball () {
+  local packagemanager distribution release subdir
   subdir="${1}"
-  local packagemanager distribution
   packagemanager="${subdir%/*}"
   distribution="${subdir#${packagemanager}/}"
   release="${distribution#*-}"
@@ -205,7 +205,26 @@ EOA
   esac
 }
 
+docker_init () {
+  local packagemanager distribution release subdir
+  subdir="${1}"
+  packagemanager="${subdir%/*}"
+  distribution="${subdir#${packagemanager}/}"
+  release="${distribution#*-}"
+  distribution="${distribution%-${release}}"
+  docker import "${distribution}-${release}.tar" "pre-${distribution}-${release}"
+  docker run -i --name "setup-${distribution}-${release}" -t "pre-${distribution}-${release}" /startup
+  docker export "setup-${distribution}-${release}" | docker import - "${distribution}-${release}"
+  docker rm "setup-${distribution}-${release}"
+  docker rmi "pre-${distribution}-${release}"
+
+  case "${packagemanager}" in
+    yum) docker run --rm=true "${distribution}-${release}" yum check-update
+  esac
+}
+
 for d in config/*/* ; do
  create_chroot_tarball "${d}"
+ docker_init "${d}"
 done
 
