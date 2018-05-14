@@ -77,13 +77,15 @@ create_chroot_tarball () {
       done
       rpm -iv --nodeps "${subdir}/*.rpm"
       centos_ver=$(rpm -q --qf "%{VERSION}" centos-release || true)
+      repos_d=( "${subdir}/yum.repos.d"/*.repo )
+      if [ -e "${repos_d[0]}" ] ; then
+        for f in "${repos_d}" ; do
+          b="${f##*/}"
+          sudo install -m644 "${f}" "${rootdir}/etc/yum.repos.d/${b}"
+        done
+      fi
       case "${centos_ver}" in
-        5) sudo sed -i -e '/^mirrorlist.*/d' \
-                  -e 's/^#baseurl/baseurl/g' \
-                  -e 's/mirror/vault/g' \
-                  -e 's@centos/$release@5.11@g' \
-           "${rootdir}/etc/yum.repos.d/CentOS-Base.repo"
-           sed -e 's/,nocontexts//' < config/yum-common.conf | sudo tee "${rootdir}/etc/yum.conf" > /dev/null
+        5) sed -e 's/,nocontexts//' < config/yum-common.conf | sudo tee "${rootdir}/etc/yum.conf" > /dev/null
         ;;
         *)
           sudo cp config/yum-common.conf "${rootdir}/etc/yum.conf"
