@@ -225,8 +225,14 @@ docker_init () {
   esac
 }
 
-for d in config/*/* ; do
- create_chroot_tarball "${d}"
- docker_init "${d}"
-done
+if [ -z "${1+x}" ] ; then
+  # build everything!
+  for d in config/*/* ; do
+   create_chroot_tarball "${d}"
+   docker_init "${d}"
+  done
+else
+  create_chroot_tarball "${1}"
+  docker_init "${1}"
+fi
 
