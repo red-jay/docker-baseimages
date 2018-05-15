@@ -9,6 +9,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: replace repo file
+          command: mv config/yum/centos-7/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d && yum clean all
+      - run:
           name: install docker prereqs
           command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && yum -y install docker-ce && yum -y install epel-release && yum -y install debootstrap perl which dpkg
       - setup_remote_docker
