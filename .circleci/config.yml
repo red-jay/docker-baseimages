@@ -1,0 +1,17 @@
+version: 2
+
+jobs:
+  build-chroots:
+    docker:
+      - image: docker.io/redjays/c7:docker-ce
+    working_directory: /project
+    environment:
+    steps:
+      - checkout
+      - run:
+          name: install docker prereqs
+          command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && yum -y install docker-ce && yum -y install epel-release && yum -y install debootstrap perl which dpkg
+      - setup_remote_docker
+      - run:
+          name: chroot build base images
+          command: ./mkimage-chroot.sh
