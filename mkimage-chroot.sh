@@ -37,7 +37,7 @@ trap __cleanup EXIT ERR
 
 sudo () { env "$@"; }
 # if we're not root, bring sudo to $sudo
-[ $(id -u) != "0" ] && sudo () { command sudo env "$@"; }
+[ "$(id -u)" != "0" ] && sudo () { command sudo env "$@"; }
 
 create_chroot_tarball () {
   local packagemanager distribution release subdir
@@ -49,18 +49,21 @@ create_chroot_tarball () {
   local gpg_keydir
   # check that we have a gpg dir for dist.
   gpg_keydir="${subdir}/gpg-keys"
+  # shellcheck disable=SC2015
   [ ! -d "${gpg_keydir}" ] && { echo "missing ${gpg_keydir}" 1>&2 ; exit 1 ; } || true
   local deboostrap_file
   debootstrap_file="${debootstrap_dir}/scripts/${release}"
 
   # if we didn't get packagemanager, distribution display usage
+  # shellcheck disable=SC2015
   case "${packagemanager}" in
     *yum) packagemanager=yum ;;
     *apt) packagemanager=apt ; [ ! -e "${debootstrap_file}" ] && { echo "missing ${debootstrap_file}" 1>&2 ; exit 1 ; } || true ;;
     *) echo "unknown packagemanager" 1>&2 ; exit 240 ;;
   esac
 
-  # mock out commands via function overload here
+  # mock out commands via function overload here - which is exactly what we want, but drives shellcheck batty.
+  # shellcheck disable=SC2032,SC2033
   rpm() { sudo rpm --root "${rootdir}" "${@}"; }
   debootstrap() { sudo DEBOOTSTRAP_DIR="$(pwd)/debootstrap" bash -x "$(which debootstrap)" --verbose --arch=amd64 "${@}" "${rootdir}" ; }
 
@@ -79,7 +82,7 @@ create_chroot_tarball () {
       centos_ver=$(rpm -q --qf "%{VERSION}" centos-release || true)
       repos_d=( "${subdir}/yum.repos.d"/*.repo )
       if [ -e "${repos_d[0]}" ] ; then
-        for f in "${repos_d}" ; do
+        for f in "${repos_d[@]}" ; do
           b="${f##*/}"
           sudo install -m644 "${f}" "${rootdir}/etc/yum.repos.d/${b}"
         done
@@ -112,10 +115,12 @@ create_chroot_tarball () {
     ;;
   esac
 
+  # I need sudo for _read_ permissions, but you can own this fine.
+  # shellcheck disable=SC2024
   sudo tar cp '--exclude=./dev*' -C "${rootdir}" . > "${distribution}-${release}.tar"
 
   # create config tar
-  scratch=$(mktemp -d --tmpdir $(basename $0).XXXXXX)
+  scratch=$(mktemp -d --tmpdir "$(basename "$0")".XXXXXX)
   mkdir -p             "${scratch}"/etc/sysconfig
   chmod a+rx           "${scratch}"/etc/sysconfig
   case "${packagemanager}" in
@@ -139,7 +144,7 @@ EOA
   devtar=$(mktemp --tmpdir dev.XXX.tar)
   zcat "${devtgz}" > "${devtar}"
 
-  rpmdbfiles=$(mktemp --tmpdir $(basename $0).XXXXXX)
+  rpmdbfiles=$(mktemp --tmpdir "$(basename "$0")".XXXXXX)
 
   case "${packagemanager}" in
     yum)
@@ -160,7 +165,7 @@ EOA
 ./var/lib/rpm/Sha1header
 EOA
 
-    rpmdbdir=$(mktemp -d --tmpdir $(basename $0).XXXXXX)
+    rpmdbdir=$(mktemp -d --tmpdir "$(basename "$0")".XXXXXX)
     # first, pry the rpmdb out.
     tar -C "${rpmdbdir}" --extract --file="${distribution}-${release}".tar --files-from="${rpmdbfiles}"
     # conver db files to dump files
@@ -169,7 +174,7 @@ EOA
       rm "${x}"
     done
 
-    cat "${rpmdbfiles}" | awk '{printf "%s.dump\n",$0}' | tar --numeric-owner --group=0 --owner=0 -C "${rpmdbdir}" --create --file="${distribution}-${release}"-rpmdb.tar --files-from=-
+    awk '{printf "%s.dump\n",$0}' < "${rpmdbfiles}" | tar --numeric-owner --group=0 --owner=0 -C "${rpmdbdir}" --create --file="${distribution}-${release}"-rpmdb.tar --files-from=-
     ;;
   esac
 

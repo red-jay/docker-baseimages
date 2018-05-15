@@ -9,23 +9,23 @@ type yum || platform=""
 
 case "${platform}" in
   yum)
-    dbload=/usr/bin/db_load
-
     # bring RPM back online from export so it works in chroot.
     cd /var/lib/rpm
 
     for x in *.dump ; do
-      cat "${x}" | /usr/lib/rpm/rpmdb_load $(basename "${x}" .dump)
+      dest="$(basename "${x}" .dump)"
+      /usr/lib/rpm/rpmdb_load "${dest}" < "${x}"
       rm "${x}"
     done
 
     cd -
 
-    rpm --rebuilddb || [ -d /var/lib/rpmrebuilddb.* ]
+    rebuilddbdirs=( /var/lib/rpmrebuilddb.* )
+    rpm --rebuilddb || [ -d "${rebuilddbdirs[0]}" ]
 
-    if [ -d /var/lib/rpmrebuilddb.* ] ; then
-      mv /var/lib/rpmrebuilddb.*/* /var/lib/rpm
-      rmdir /var/lib/rpmrebuilddb.*
+    if [ -d "${rebuilddbdirs[0]}" ] ; then
+      mv "${rebuilddbdirs[0]}"/* /var/lib/rpm
+      rmdir "${rebuilddbdirs[0]}"
     fi
 
     yum clean all
@@ -43,5 +43,5 @@ esac
 
 # if we find ourselves, delete ourselves.
 if [[ -s "$BASH_SOURCE" ]] && [[ -x "$BASH_SOURCE" ]]; then
-        rm $(readlink -f "$BASH_SOURCE")
+        rm "$(readlink -f "$BASH_SOURCE")"
 fi
