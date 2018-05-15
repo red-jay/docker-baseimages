@@ -1,7 +1,7 @@
 version: 2
 
 jobs:
-  build-chroots:
+  build:
     docker:
       - image: docker.io/redjays/c7:docker-ce
     working_directory: /project
