@@ -20,13 +20,10 @@ case "${platform}" in
 
     cd -
 
-    rebuilddbdirs=( /var/lib/rpmrebuilddb.* )
-    rpm --rebuilddb || [ -d "${rebuilddbdirs[0]}" ]
-
-    if [ -d "${rebuilddbdirs[0]}" ] ; then
+    rpm --rebuilddb || { rebuilddbdirs=( /var/lib/rpmrebuilddb.* ) && [ -d "${rebuilddbdirs[0]}" ]
       mv "${rebuilddbdirs[0]}"/* /var/lib/rpm
       rmdir "${rebuilddbdirs[0]}"
-    fi
+    }
 
     yum clean all
   ;;
