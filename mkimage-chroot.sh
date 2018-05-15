@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eux
 set -o pipefail
 
 # locate source files
@@ -99,6 +99,7 @@ create_chroot_tarball () {
       yumconf=$(mktemp --tmpdir yum.XXXX.conf)
       sudo cp "${rootdir}/etc/yum.conf" "${yumconf}"
       printf 'reposdir=%s\n' "${rootdir}/etc/yum.repos.d" >> "${yumconf}"
+      sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" repolist -v
       case "${distribution}" in
         centos*) sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -y @Base yum yum-plugin-ovl yum-utils centos-release centos-release-notes ;;
         fedora*) sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -y '@Minimal Install' yum yum-plugin-ovl yum-utils fedora-release fedora-release-notes fedora-gpg-keys ;;
