@@ -102,8 +102,8 @@ create_chroot_tarball () {
       printf 'reposdir=%s\n' "${rootdir}/etc/yum.repos.d" >> "${yumconf}"
       sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" repolist -v
       case "${distribution}" in
-        centos*) sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -y @Base yum yum-plugin-ovl yum-utils centos-release centos-release-notes ;;
-        fedora*) sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -y '@Minimal Install' yum yum-plugin-ovl yum-utils fedora-release fedora-release-notes fedora-gpg-keys ;;
+        centos*) sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -q -y @Base yum yum-plugin-ovl yum-utils centos-release centos-release-notes ;;
+        fedora*) sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -q -y '@Minimal Install' yum yum-plugin-ovl yum-utils fedora-release fedora-release-notes fedora-gpg-keys ;;
       esac
     ;;
     apt)
