@@ -210,7 +210,7 @@ EOA
   tar --concatenate --file="${distribution}-${release}".tar "${devtar}"
   tar --concatenate --file="${distribution}-${release}".tar "${conftar}"
   case "${packagemanager}" in
-    yum) tar --concatenate --file="${distribution}-${release}.tar" "${distribution}-${release}-rpmdb.tar" ;;
+    yum) tar --concatenate --file="${distribution}-${release}.tar" "${distribution}-${release}-rpmdb.tar" && rm "${distribution}-${release}-rpmdb.tar" ;;
   esac
 }
 
@@ -223,9 +223,10 @@ docker_init () {
   release="${distribution#*-}"
   distribution="${distribution%-${release}}"
   docker import "${distribution}-${release}.tar" "pre/${distribution}-${release}"
-  docker run -i --name "setup-${distribution}-${release}" -t "pre/${distribution}-${release}" /startup
-  docker export "setup-${distribution}-${release}" | docker import - "build/${distribution}-${release}"
-  docker rm "setup-${distribution}-${release}"
+  rm "${distribution}-${release}.tar"
+  docker run -i --name "setup_${distribution}-${release}" -t "pre/${distribution}-${release}" /startup
+  docker export "setup_${distribution}-${release}" | docker import - "build/${distribution}-${release}"
+  docker rm "setup_${distribution}-${release}"
   docker rmi "pre/${distribution}-${release}"
 
   docker_check "build/${distribution}-${release}" "${packagemanager}" && {
@@ -240,7 +241,9 @@ docker_check () {
   packagemanager="${2}"
 
   case "${packagemanager}" in
-    yum) docker run --rm=true "${image}" yum check-update
+    yum) docker run --rm=true "${image}" yum check-update ;;
+    apt) docker run --rm=true "${image}" bash -ec '{ export TERM=dumb ; apt-get -q update && apt-get -qs dist-upgrade; }' ;;
+    *)   echo "don't know how to ${packagemanager}" 1>&2 ; exit 1 ;;
   esac
 }
 
@@ -254,9 +257,32 @@ check_existing () {
   distribution="${distribution%-${release}}"
 
   if [ ! -z "${DOCKER_SINK+x}" ] ; then
-    docker_check "${DOCKER_SINK}/${distribution}:${release}" "${packagemanager}"
+    docker_check "${DOCKER_SINK}/${distribution}:${release}" "${packagemanager}" && \
+      docker tag "${DOCKER_SINK}/${distribution}:${release}" "final/${distribution}:${release}"
   else
+    docker rmi -f "${DOCKER_SINK}/${distribution}:${release}"
     return 1
+  fi
+}
+
+add_layers () {
+  local packagemanager distribution release subdir stage2name
+  subdir="${1}"
+  packagemanager="${subdir%/*}"
+  packagemanager="${packagemanager#*/}"
+  distribution="${subdir#*${packagemanager}/}"
+  release="${distribution#*-}"
+  distribution="${distribution%-${release}}"
+
+  stage2name=$(docker images "stage2/${distribution}-${release}" --format "{{.Repository}}")
+
+  if [ ! -z  "${stage2name}" ] ; then
+    if [ -f "${subdir}/Dockerfile" ] ; then
+      docker build -f "${subdir}/Dockerfile" -t "final/${distribution}:${release}" .
+    else
+      docker tag "stage2/${distribution}-${release}" "final/${distribution}:${release}"
+    fi
+    docker rmi "stage2/${distribution}-${release}"
   fi
 }
 
@@ -266,10 +292,12 @@ if [ -z "${1+x}" ] ; then
    check_existing "${d}" || {
      create_chroot_tarball "${d}"
      docker_init "${d}"
+     add_layers "${d}"
    }
   done
 else
   create_chroot_tarball "${1}"
   docker_init "${1}"
+  add_layers "${1}"
 fi
 
