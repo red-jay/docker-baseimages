@@ -228,7 +228,7 @@ docker_init () {
   docker rm "setup-${distribution}-${release}"
   docker rmi "pre-${distribution}-${release}"
 
-  docker_check "build/${distribution}-${release}" "${packagemanager}"
+  docker_check "build/${distribution}-${release}" "${packagemanager}" && docker tag "build/${distribution}-${release}" "stage2/${distribution}-${release}"
 }
 
 docker_check () {
