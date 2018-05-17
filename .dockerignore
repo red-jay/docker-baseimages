@@ -1,0 +1,7 @@
+.circleci
+.git*
+*.sh
+*.tar
+*.tar.gz
+config
+debootstrap
