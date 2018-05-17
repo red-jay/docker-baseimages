@@ -222,13 +222,16 @@ docker_init () {
   distribution="${subdir#*${packagemanager}/}"
   release="${distribution#*-}"
   distribution="${distribution%-${release}}"
-  docker import "${distribution}-${release}.tar" "pre-${distribution}-${release}"
-  docker run -i --name "setup-${distribution}-${release}" -t "pre-${distribution}-${release}" /startup
+  docker import "${distribution}-${release}.tar" "pre/${distribution}-${release}"
+  docker run -i --name "setup-${distribution}-${release}" -t "pre/${distribution}-${release}" /startup
   docker export "setup-${distribution}-${release}" | docker import - "build/${distribution}-${release}"
   docker rm "setup-${distribution}-${release}"
-  docker rmi "pre-${distribution}-${release}"
+  docker rmi "pre/${distribution}-${release}"
 
-  docker_check "build/${distribution}-${release}" "${packagemanager}" && docker tag "build/${distribution}-${release}" "stage2/${distribution}-${release}"
+  docker_check "build/${distribution}-${release}" "${packagemanager}" && {
+    docker tag "build/${distribution}-${release}" "stage2/${distribution}-${release}"
+    docker rmi "build/${distribution}-${release}"
+  }
 }
 
 docker_check () {
@@ -241,11 +244,29 @@ docker_check () {
   esac
 }
 
+check_existing () {
+  local packagemanager distribution release subdir
+  subdir="${1}"
+  packagemanager="${subdir%/*}"
+  packagemanager="${packagemanager#*/}"
+  distribution="${subdir#*${packagemanager}/}"
+  release="${distribution#*-}"
+  distribution="${distribution%-${release}}"
+
+  if [ ! -z "${DOCKER_SINK+x}" ] ; then
+    docker_check "${DOCKER_SINK}/${distribution}:${release}" "${packagemanager}"
+  else
+    return 1
+  fi
+}
+
 if [ -z "${1+x}" ] ; then
   # build everything!
   for d in config/*/* ; do
-   create_chroot_tarball "${d}"
-   docker_init "${d}"
+   check_existing "${d}" || {
+     create_chroot_tarball "${d}"
+     docker_init "${d}"
+   }
   done
 else
   create_chroot_tarball "${1}"
