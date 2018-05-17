@@ -256,7 +256,7 @@ check_existing () {
   release="${distribution#*-}"
   distribution="${distribution%-${release}}"
 
-  if [ ! -z "${DOCKER_SINK+x}" ] ; then
+  if [ "${DOCKER_SINK:=''}" ] ; then
     docker_check "${DOCKER_SINK}/${distribution}:${release}" "${packagemanager}" && \
       docker tag "${DOCKER_SINK}/${distribution}:${release}" "final/${distribution}:${release}"
   else
