@@ -43,7 +43,8 @@ create_chroot_tarball () {
   local packagemanager distribution release subdir
   subdir="${1}"
   packagemanager="${subdir%/*}"
-  distribution="${subdir#${packagemanager}/}"
+  packagemanager="${packagemanager#*/}"
+  distribution="${subdir#*${packagemanager}/}"
   release="${distribution#*-}"
   distribution="${distribution%-${release}}"
   local gpg_keydir
@@ -217,7 +218,8 @@ docker_init () {
   local packagemanager distribution release subdir
   subdir="${1}"
   packagemanager="${subdir%/*}"
-  distribution="${subdir#${packagemanager}/}"
+  packagemanager="${packagemanager#*/}"
+  distribution="${subdir#*${packagemanager}/}"
   release="${distribution#*-}"
   distribution="${distribution%-${release}}"
   docker import "${distribution}-${release}.tar" "pre-${distribution}-${release}"
@@ -226,8 +228,16 @@ docker_init () {
   docker rm "setup-${distribution}-${release}"
   docker rmi "pre-${distribution}-${release}"
 
+  docker_check "build/${distribution}-${release}" "${packagemanager}"
+}
+
+docker_check () {
+  local packagemanager image
+  image="${1}"
+  packagemanager="${2}"
+
   case "${packagemanager}" in
-    yum) docker run --rm=true "build/${distribution}-${release}" yum check-update
+    yum) docker run --rm=true "${image}" yum check-update
   esac
 }
 
