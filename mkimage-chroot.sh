@@ -248,6 +248,7 @@ docker_check () {
 }
 
 check_existing () {
+  [ "${FORCE_BUILD:=''}" ] && return 1
   local packagemanager distribution release subdir
   subdir="${1}"
   packagemanager="${subdir%/*}"

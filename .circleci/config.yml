@@ -17,7 +17,7 @@ jobs:
       - setup_remote_docker
       - run:
           name: chroot build base images
-          command: env DOCKER_SINK=docker.io/redjays ./mkimage-chroot.sh
+          command: env FORCE_BUILD=1 DOCKER_SINK=docker.io/redjays ./mkimage-chroot.sh
       - run:
           name: push base images
           command: env DOCKER_SINK=docker.io/redjays ./publish.sh
