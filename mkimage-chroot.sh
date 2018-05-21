@@ -16,6 +16,10 @@ devtgz="${srcdir}/devs.tar.gz"
 
 debootstrap_dir="${srcdir}/debootstrap"
 
+if [ -z "${UBUNTU_URI:=''}" ] ; then
+  UBUNTU_URI=https://mirrors.kernel.org/ubuntu/
+fi
+
 # reset umask
 umask 0022
 
@@ -67,7 +71,7 @@ create_chroot_tarball () {
   # mock out commands via function overload here - which is exactly what we want, but drives shellcheck batty.
   # shellcheck disable=SC2032,SC2033
   rpm() { sudo rpm --root "${rootdir}" "${@}"; }
-  debootstrap() { sudo DEBOOTSTRAP_DIR="$(pwd)/debootstrap" bash -x "$(which debootstrap)" --verbose --arch=amd64 "${@}" "${rootdir}" ; }
+  debootstrap() { sudo DEBOOTSTRAP_DIR="$(pwd)/debootstrap" bash -x "$(which debootstrap)" --verbose --arch=amd64 "${@}" "${rootdir}" "${UBUNTU_URI}" ; }
 
   # let's go!
   rootdir=$(mktemp -d)
@@ -107,7 +111,7 @@ create_chroot_tarball () {
       sudo cp "${rootdir}/etc/yum.conf" "${yumconf}"
       printf 'reposdir=%s\n' "${rootdir}/etc/yum.repos.d" >> "${yumconf}"
       sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" repolist -v
-      sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -y "${inst_packages[@]}"
+      sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -q -y "${inst_packages[@]}"
     ;;
     apt)
       keyring=( "${subdir}/gpg-keys"/*.gpg )
