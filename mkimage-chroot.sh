@@ -26,7 +26,7 @@ if [ ! -f "${devtgz}" ] ; then
 fi
 
 # create a scratch directory to use for working files
-wkdir=$(mktemp -d)
+wkdir=$(env TMPDIR=/var/tmp mktemp -d)
 export TMPDIR="${wkdir}"
 
 __cleanup () {
@@ -88,12 +88,17 @@ create_chroot_tarball () {
           sudo install -m644 "${f}" "${rootdir}/etc/yum.repos.d/${b}"
         done
       fi
+      case "${distribution}" in
+        centos*)
+          inst_packages=(@Base yum yum-plugin-ovl yum-utils centos-release) ;;
+        fedora*)
+          inst_packages=("@Minimal Install" yum yum-plugin-ovl yum-utils fedora-release fedora-release-notes fedora-gpg-keys)
+      esac
       case "${centos_ver}" in
         5) sed -e 's/,nocontexts//' < config/yum-common.conf | sudo tee "${rootdir}/etc/yum.conf" > /dev/null
-        ;;
+           inst_packages=(@Base yum yum-utils centos-release centos-release-notes) ;;
         *)
-          sudo cp config/yum-common.conf "${rootdir}/etc/yum.conf"
-        ;;
+          sudo cp config/yum-common.conf "${rootdir}/etc/yum.conf" ;;
       esac
       # let yum do the rest of the lifting
       sudo rm -rf /var/tmp/yum-* /var/cache/yum/*
@@ -101,16 +106,13 @@ create_chroot_tarball () {
       sudo cp "${rootdir}/etc/yum.conf" "${yumconf}"
       printf 'reposdir=%s\n' "${rootdir}/etc/yum.repos.d" >> "${yumconf}"
       sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" repolist -v
-      case "${distribution}" in
-        centos*) sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -q -y @Base yum yum-plugin-ovl yum-utils centos-release centos-release-notes ;;
-        fedora*) sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -q -y '@Minimal Install' yum yum-plugin-ovl yum-utils fedora-release fedora-release-notes fedora-gpg-keys ;;
-      esac
+      sudo yum --releasever="${release}" --installroot="${rootdir}" -c "${yumconf}" install -y "${inst_packages[@]}"
     ;;
     apt)
       keyring=( "${subdir}/gpg-keys"/*.gpg )
       debootstrap --foreign --keyring="${keyring[0]}" "${release}" || true
       sudo mkdir -p --mode=0755 "${rootdir}/var/lib/resolvconf" && sudo touch "${rootdir}/var/lib/resolvconf/linkified"
-      sudo install -m644 "${subdir}/sources.list" "${rootdir}/apt-sources.list"
+      [ -f "${subdir}/sources.list" ] && sudo install -m644 "${subdir}/sources.list" "${rootdir}/apt-sources.list"
       case "${distribution}" in
         ubuntu*) sudo mkdir -p --mode=0755 "${rootdir}/usr/share/keyrings" && sudo install -m644 "${keyring[0]}" "${rootdir}/usr/share/keyrings/ubuntu-archive-keyring.gpg" ;;
       esac
