@@ -59,6 +59,7 @@ create_chroot_tarball () {
   # shellcheck disable=SC2015
   case "${packagemanager}" in
     *yum) packagemanager=yum ;;
+    *dnf) packagemanager=dnf ;;
     *apt) packagemanager=apt ; [ ! -e "${debootstrap_file}" ] && { echo "missing ${debootstrap_file}" 1>&2 ; exit 1 ; } || true ;;
     *) echo "unknown packagemanager" 1>&2 ; exit 240 ;;
   esac
@@ -73,7 +74,7 @@ create_chroot_tarball () {
   conftar=$(mktemp --tmpdir conf.XXX.tar)
 
   case "${packagemanager}" in
-    yum)
+    yum|dnf)
       # init rpm, add gpg keys and release rpm
       rpm --initdb
       for gpg in "${gpg_keydir}"/* ; do
@@ -92,7 +93,7 @@ create_chroot_tarball () {
         centos*)
           inst_packages=(@Base yum yum-plugin-ovl yum-utils centos-release) ;;
         fedora*)
-          inst_packages=("@Minimal Install" yum yum-plugin-ovl yum-utils fedora-release fedora-release-notes fedora-gpg-keys)
+          inst_packages=("@Minimal Install" dnf fedora-release fedora-release-notes fedora-gpg-keys)
       esac
       case "${centos_ver}" in
         5) sed -e 's/,nocontexts//' < config/yum-common.conf | sudo tee "${rootdir}/etc/yum.conf" > /dev/null
@@ -151,7 +152,7 @@ EOA
   rpmdbfiles=$(mktemp --tmpdir "$(basename "$0")".XXXXXX)
 
   case "${packagemanager}" in
-    yum)
+    yum|dnf)
       # use this for rpmdb extraction
       cat << EOA > "${rpmdbfiles}"
 ./var/lib/rpm/Packages
@@ -212,7 +213,7 @@ EOA
   tar --concatenate --file="${distribution}-${release}".tar "${devtar}"
   tar --concatenate --file="${distribution}-${release}".tar "${conftar}"
   case "${packagemanager}" in
-    yum) tar --concatenate --file="${distribution}-${release}.tar" "${distribution}-${release}-rpmdb.tar" && rm "${distribution}-${release}-rpmdb.tar" ;;
+    yum|dnf) tar --concatenate --file="${distribution}-${release}.tar" "${distribution}-${release}-rpmdb.tar" && rm "${distribution}-${release}-rpmdb.tar" ;;
   esac
 }
 
@@ -243,7 +244,7 @@ docker_check () {
   packagemanager="${2}"
 
   case "${packagemanager}" in
-    yum) docker run --rm=true "${image}" yum check-update ;;
+    yum|dnf) docker run --rm=true "${image}" "${packagemanager}" check-update ;;
     apt) docker run --rm=true "${image}" bash -ec '{ export TERM=dumb ; apt-get -q update && apt-get -qs dist-upgrade; }' ;;
     *)   echo "don't know how to ${packagemanager}" 1>&2 ; exit 1 ;;
   esac

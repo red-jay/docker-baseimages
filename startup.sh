@@ -5,10 +5,11 @@ export DEBIAN_FRONTEND=noninteractive
 
 platform="yum"
 type yum || platform=""
+type dnf && platform="dnf"
 [ -f /debootstrap/debootstrap ] && platform="apt"
 
 case "${platform}" in
-  yum)
+  yum|dnf)
     # bring RPM back online from export so it works in chroot.
     cd /var/lib/rpm
 
@@ -25,7 +26,7 @@ case "${platform}" in
       rmdir "${rebuilddbdirs[0]}"
     }
 
-    yum clean all
+    "${platform}" clean all
   ;;
   apt)
     /debootstrap/debootstrap --second-stage || { cat /debootstrap/debootstrap.log ; exit 1; }
