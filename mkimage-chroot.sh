@@ -16,9 +16,7 @@ devtgz="${srcdir}/devs.tar.gz"
 
 debootstrap_dir="${srcdir}/debootstrap"
 
-if [ -z "${UBUNTU_URI:=''}" ] ; then
-  UBUNTU_URI=https://mirrors.kernel.org/ubuntu/
-fi
+[ "${UBUNTU_URI:=}" ] || UBUNTU_URI=https://mirrors.kernel.org/ubuntu/
 
 # reset umask
 umask 0022
@@ -255,7 +253,7 @@ docker_check () {
 }
 
 check_existing () {
-  [ "${FORCE_BUILD:=''}" ] && return 1
+  [ "${FORCE_BUILD:=}" ] && return 1
   local packagemanager distribution release subdir
   subdir="${1}"
   packagemanager="${subdir%/*}"
