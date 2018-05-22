@@ -122,6 +122,8 @@ create_chroot_tarball () {
     ;;
   esac
 
+  [ -f "${rootdir}/etc/machine-id" ] && : | sudo tee "${rootdir}/etc/machine-id"
+
   # I need sudo for _read_ permissions, but you can own this fine.
   # shellcheck disable=SC2024
   sudo tar cp '--exclude=./dev*' -C "${rootdir}" . > "${distribution}-${release}.tar"
