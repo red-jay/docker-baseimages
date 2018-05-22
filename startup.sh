@@ -39,6 +39,9 @@ case "${platform}" in
   ;;
 esac
 
+[ ! -d /etc/stamps.d ] && rm -rf /etc/stamps.d && mkdir /etc/stamps.d
+date "+%s" > /etc/stamps.d/base.stamp
+
 # if we find ourselves, delete ourselves.
 if [[ -s "$BASH_SOURCE" ]] && [[ -x "$BASH_SOURCE" ]]; then
         rm "$(readlink -f "$BASH_SOURCE")"
