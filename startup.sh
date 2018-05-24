@@ -36,6 +36,7 @@ case "${platform}" in
     apt-get -qy upgrade
     debsums_init
     apt-get clean all
+    rm -rf /var/lib/apt/lists/*
   ;;
 esac
 
