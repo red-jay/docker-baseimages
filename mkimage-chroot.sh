@@ -249,7 +249,7 @@ docker_check () {
 
   case "${packagemanager}" in
     yum|dnf) docker run --rm=true "${image}" "${packagemanager}" check-update ;;
-    apt) docker run --rm=true "${image}" bash -ec '{ export TERM=dumb ; apt-get -q update && apt-get -qs dist-upgrade; }' ;;
+    apt) docker run --rm=true "${image}" bash -ec '{ export TERM=dumb ; apt-get -q update && apt-get dist-upgrade --assume-no; }' ;;
     *)   echo "don't know how to ${packagemanager}" 1>&2 ; exit 1 ;;
   esac
 }
