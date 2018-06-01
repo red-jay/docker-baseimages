@@ -29,6 +29,7 @@ case "${platform}" in
     "${platform}" clean all
   ;;
   apt)
+    echo "resolvconf resolvconf/linkify-resolvconf boolean false" | debconf-set-selections
     /debootstrap/debootstrap --second-stage || { cat /debootstrap/debootstrap.log ; exit 1; }
     install -m644 /apt-sources.list /etc/apt/sources.list && rm /apt-sources.list
     apt-get update
