@@ -1,0 +1,5 @@
+deb http://us.archive.ubuntu.com/ubuntu/ precise main universe 
+deb http://us.archive.ubuntu.com/ubuntu/ precise-security main universe 
+deb http://us.archive.ubuntu.com/ubuntu/ precise-updates main universe 
+
+

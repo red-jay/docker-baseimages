@@ -29,15 +29,19 @@ case "${platform}" in
     "${platform}" clean all
   ;;
   apt)
+    dpkg-divert --rename /usr/bin/ischroot && ln -s /bin/true /usr/bin/ischroot
+    dpkg-divert --rename /usr/sbin/invoke-rc.d && ln -s /bin/true /usr/sbin/invoke-rc.d
     echo "resolvconf resolvconf/linkify-resolvconf boolean false" | debconf-set-selections
     /debootstrap/debootstrap --second-stage || { cat /debootstrap/debootstrap.log ; exit 1; }
     install -m644 /apt-sources.list /etc/apt/sources.list && rm /apt-sources.list
     apt-get update
     apt-get install -qy debsums ca-certificates
-    apt-get -qy upgrade
+    apt-get -qy dist-upgrade
     debsums_init
     apt-get clean all
     rm -rf /var/lib/apt/lists/*
+    rm /usr/bin/ischroot && dpkg-divert --rename --remove /usr/bin/ischroot
+    rm /usr/sbin/invoke-rc.d && dpkg-divert --rename --remove /usr/sbin/invoke-rc.d
   ;;
 esac
 
