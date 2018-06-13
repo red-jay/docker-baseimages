@@ -13,6 +13,10 @@ jobs:
           command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && yum -y install docker-ce && yum -y install epel-release && yum -y install debootstrap perl which dpkg
       - setup_remote_docker
       - run:
+          name: log in to docker.io
+          command: |
+              docker login -u $DOCKER_USER -p $DOCKER_PASS docker.io
+      - run:
           name: chroot build base images
           command: env FORCE_BUILD=1 DOCKER_SINK=docker.io/redjays ./mkimage-chroot.sh
       - run:
