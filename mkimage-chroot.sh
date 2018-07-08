@@ -93,7 +93,11 @@ create_chroot_tarball () {
       fi
       case "${distribution}" in
         centos*)
-          inst_packages=(@Base yum yum-plugin-ovl yum-utils centos-release) ;;
+          inst_packages=(@Base yum yum-plugin-ovl yum-utils centos-release)
+          # https://lists.centos.org/pipermail/centos-devel/2018-March/016542.html
+          sudo mkdir -p "${rootdir}/etc/yum/vars"
+          uname -m | grep -q 'x86_64'  && echo 'centos' | sudo tee "${rootdir}/etc/yum/vars/contentdir" || echo 'altarch' | sudo tee "${rootdir}/etc/yum/vars/contentdir"
+        ;;
         fedora*)
           inst_packages=("@Minimal Install" dnf fedora-release fedora-release-notes fedora-gpg-keys)
       esac
@@ -304,8 +308,10 @@ if [ -z "${1+x}" ] ; then
    }
   done
 else
+  check_existing "${1}" || {
   create_chroot_tarball "${1}"
   docker_init "${1}"
   add_layers "${1}"
+  }
 fi
 
