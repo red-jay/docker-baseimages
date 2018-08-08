@@ -69,7 +69,7 @@ create_chroot_tarball () {
   # mock out commands via function overload here - which is exactly what we want, but drives shellcheck batty.
   # shellcheck disable=SC2032,SC2033
   rpm() { sudo rpm --root "${rootdir}" "${@}"; }
-  debootstrap() { sudo DEBOOTSTRAP_DIR="$(pwd)/debootstrap" bash -x "$(which debootstrap)" --verbose --arch=amd64 "${@}" "${rootdir}" "${UBUNTU_URI}" ; }
+  debootstrap() { sudo DEBOOTSTRAP_DIR="$(pwd)/debootstrap" bash -x "$(which debootstrap)" --verbose --variant=minbase --arch=amd64 "${@}" "${rootdir}" "${UBUNTU_URI}" ; }
 
   # let's go!
   rootdir=$(mktemp -d)
