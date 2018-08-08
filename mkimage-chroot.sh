@@ -159,35 +159,55 @@ EOA
 
   rpmdbfiles=$(mktemp --tmpdir "$(basename "$0")".XXXXXX)
 
+  # ubuntu/debian do stupid things to rpm.
+  os_like=$(. /etc/os-release ; echo $ID_LIKE)
+  case "${os_like}" in
+    debian) rpmdbdir="${HOME}/.rpmdb" ;;
+    *)      rpmdbdir="/var/lib/rpm" ;;
+  esac
+
   case "${packagemanager}" in
     yum|dnf)
       # use this for rpmdb extraction
       cat << EOA > "${rpmdbfiles}"
-./var/lib/rpm/Packages
-./var/lib/rpm/Name
-./var/lib/rpm/Basenames
-./var/lib/rpm/Group
-./var/lib/rpm/Requirename
-./var/lib/rpm/Providename
-./var/lib/rpm/Conflictname
-./var/lib/rpm/Obsoletename
-./var/lib/rpm/Triggername
-./var/lib/rpm/Dirnames
-./var/lib/rpm/Installtid
-./var/lib/rpm/Sigmd5
-./var/lib/rpm/Sha1header
+.${rpmdbdir}/Packages
+.${rpmdbdir}/Name
+.${rpmdbdir}/Basenames
+.${rpmdbdir}/Group
+.${rpmdbdir}/Requirename
+.${rpmdbdir}/Providename
+.${rpmdbdir}/Conflictname
+.${rpmdbdir}/Obsoletename
+.${rpmdbdir}/Triggername
+.${rpmdbdir}/Dirnames
+.${rpmdbdir}/Installtid
+.${rpmdbdir}/Sigmd5
+.${rpmdbdir}/Sha1header
 EOA
 
-    rpmdbdir=$(mktemp -d --tmpdir "$(basename "$0")".XXXXXX)
+    rpmdb_dump="/usr/lib/rpm/rpmdb_dump"
+    [ -e "${rpmdb_dump}" ] || {
+      libdb="$(ldd "$(which rpm)"|grep libdb|cut -d= -f1)"
+      libdb="${libdb#"${libdb%%[![:space:]]*}"}"
+      libdb="${libdb%"${libdb##*[![:space:]]}"}"
+      libdb="${libdb#*-}"
+      libdb="${libdb%.so}"
+      rpmdb_dump="db${libdb}_dump"
+    }
+    rpmdb_extract_dir=$(mktemp -d --tmpdir "$(basename "$0")".XXXXXX)
+    rpmdb_dumpfiles=$(mktemp "$(basename "$0")".rpmdbdump.XXXXXX)
     # first, pry the rpmdb out.
-    tar -C "${rpmdbdir}" --extract --file="${distribution}-${release}".tar --files-from="${rpmdbfiles}"
-    # conver db files to dump files
-    for x in "${rpmdbdir}"/var/lib/rpm/* ; do
-      /usr/lib/rpm/rpmdb_dump "${x}" > "${x}.dump"
+    tar -C "${rpmdb_extract_dir}" --extract --file="${distribution}-${release}".tar --files-from="${rpmdbfiles}"
+    mkdir -p "${rpmdb_extract_dir}/var/lib/rpm"
+    # convert db files to dump files
+    for x in "${rpmdb_extract_dir}${rpmdbdir}"/* ; do
+      dumpfile="$(basename "${x}").dump"
+      "${rpmdb_dump}" "${x}" > "${rpmdb_extract_dir}/var/lib/rpm/${dumpfile}"
+      echo "./var/lib/rpm/${dumpfile}" >> "${rpmdb_dumpfiles}"
       rm "${x}"
     done
 
-    awk '{printf "%s.dump\n",$0}' < "${rpmdbfiles}" | tar --numeric-owner --group=0 --owner=0 -C "${rpmdbdir}" --create --file="${distribution}-${release}"-rpmdb.tar --files-from=-
+    tar --numeric-owner --group=0 --owner=0 -C "${rpmdb_extract_dir}" --create --file="${distribution}-${release}"-rpmdb.tar --files-from=- < "${rpmdb_dumpfiles}"
     ;;
   esac
 
